@@ -26,7 +26,7 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_toEndOf="@+id/textView"
-        android:text="https://infr11098.space/" />
+        android:text="http://infr11098.space/" />
 
     <TextView
         android:layout_width="wrap_content"

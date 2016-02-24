@@ -3,15 +3,16 @@ package uk.ac.ed.inf.secureprogramming;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -27,19 +28,29 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-
+/**
+ * Code running as part of the apps main screen.
+ */
 public class MainActivity extends AppCompatActivity {
+    /**
+     * File referencing the current photo
+     * <p/>
+     * Null when no-photo currently exists.
+     */
     private File currentPhoto = null;
-    String serverAddr = "https://infr11098.space";
 
+    /**
+     * Address and protocol of the server to upload to
+     */
+    String serverAddr = "http://infr11098.space";
+
+    /**
+     * Highly secure username and password
+     */
     final static String username = "user123";
     final static String password = "dummy";
 
+    /** Used for debugging */
     final static String TAG = "SEC_PROG";
 
 
@@ -47,94 +58,33 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        /* Set up the trust manager */
-        /*
-        try {
-            final TrustManager tm = new SecureProgrammingTrustManager();
-            final TrustManager[] tms = new TrustManager[]{
-                    new SecureProgrammingTrustManager(),
-            };
-
-            final SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, tms, null);
-            HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
-            HttpsURLConnection.setDefaultHostnameVerifier(
-                    new HostnameVerifier() {
-                        @Override
-                        public boolean verify(String hostname, SSLSession session) {
-                            return true;
-                        }
-                    }
-            );
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        */
     }
 
-    public void onPushMe(View view) {
-        final EditText serverAddrText = (EditText) findViewById(R.id.serverAddr);
-        final String serverAddr = serverAddrText.getText().toString();
-
-        new SendServerTask().execute(serverAddr);
-    }
-
+    /** Callback for when the user wants to take a picture */
     public void onTakePicture(View view) {
         this.dispatchTakePictureIntent();
     }
 
-    private class SendServerTask extends AsyncTask<String, Void, String> {
-        protected String doInBackground(String... addrs) {
-            final StringBuilder builder = new StringBuilder();
-
-            try {
-                for (String addr : addrs) {
-                    final URL url = new URL(addr);
-                    final HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-                    final InputStream in = new BufferedInputStream(conn.getInputStream());
-                    final Scanner scanner = new Scanner(in);
-
-                    while (scanner.hasNextLine()) {
-                        final String str = scanner.nextLine();
-                        builder.append(str);
-                        builder.append("\n");
-                    }
-                }
-            } catch (MalformedURLException e) {
-                return e.toString();
-            } catch (IOException e) {
-                return e.toString();
-            }
-
-            return builder.toString();
-        }
-
-        protected void onPostExecute(String result) {
-            final TextView view = (TextView) findViewById(R.id.resultView);
-            view.setText(result);
-        }
-    }
-
+    /** Creates an image file on external storage to save the photo into */
     private File createImageFile() throws IOException {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
+        File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
+                imageFileName,  // prefix
+                ".jpg",         // suffix
+                storageDir      // directory
         );
 
-        // Save a file: path for use with ACTION_VIEW intents
         this.currentPhoto = image;
         return image;
     }
 
+    /** ID for request to take a photo */
     static final int REQUEST_TAKE_PHOTO = 1;
 
+    /** Requests the camera takes a photo */
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         // Ensure that there's a camera activity to handle the intent
@@ -145,6 +95,10 @@ public class MainActivity extends AppCompatActivity {
                 photoFile = createImageFile();
             } catch (IOException ex) {
                 // Error occurred while creating the File
+                Toast.makeText(getApplicationContext(),
+                        "Failed to take picture",
+                        Toast.LENGTH_SHORT).show();
+                Log.w(TAG, "error creating image file: "+ex);
             }
             // Continue only if the File was created
             if (photoFile != null) {
@@ -155,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Callback after returning from an activity */
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_TAKE_PHOTO
                 && resultCode == RESULT_OK
@@ -163,12 +118,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Uploads the photo to the server */
     private void uploadPhoto(final File photo) {
         final EditText serverAddrText = (EditText) findViewById(R.id.serverAddr);
         serverAddr = serverAddrText.getText().toString();
         new SendServerPhotoTask().execute(photo);
     }
 
+    /** Task to perform the upload to the server */
     private class SendServerPhotoTask extends AsyncTask<File, Void, String> {
         protected String doInBackground(File... files) {
             for (File file : files) {
@@ -178,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
 
                 try {
                     url = new URL(serverAddr +"/upload");
-                    conn = (HttpsURLConnection) url.openConnection();
+                    conn = (HttpURLConnection) url.openConnection();
                     conn.setDoOutput(true);
                     conn.setRequestProperty("Content-Type", "image/jpeg");
                     conn.setRequestMethod("POST");
@@ -199,7 +156,10 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "Uploaded "+length+" bytes");
                         out.write(buffer);
                     }
-                    try { photo.close(); } catch(IOException ex) {}
+                    try {
+                        photo.close();
+                    } catch (IOException ex) {
+                        Log.w(TAG, "Couldn't close photo");}
                     Log.d(TAG, "Finished uploading photo");
 
                     final Scanner resp = new Scanner(
@@ -210,11 +170,9 @@ public class MainActivity extends AppCompatActivity {
                         return "<nothing>";
 
                 } catch (MalformedURLException e) {
-                    return e.toString();
-                } catch (IOException e) {
-                    return e.toString();
+                    return "Looks like that server is wrong:\n" + e.toString();
                 } catch (Exception e) {
-                    return e.toString();
+                    return "Something went wrong:\n" + e.toString();
                 } finally {
                     if (conn != null)
                         conn.disconnect();
@@ -224,7 +182,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String result) {
-            Log.d(TAG, "Got result: "+result);
             final TextView view = (TextView) findViewById(R.id.resultView);
             view.setText(result);
         }
