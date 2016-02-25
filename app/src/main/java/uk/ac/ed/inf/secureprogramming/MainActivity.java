@@ -158,10 +158,16 @@ public class MainActivity extends AppCompatActivity {
     private void uploadPhoto(final File photo) {
         final EditText serverAddrText = (EditText) findViewById(R.id.serverAddr);
         serverAddr = serverAddrText.getText().toString();
-
         tagPhoto(photo);
-
         new SendServerPhotoTask().execute(photo);
+    }
+
+    /** Latitude and Longitude converstions */
+    public String getGeoCoordinates(double location) {
+        final String[] degMinSec = Location.convert(location, Location.FORMAT_SECONDS).split(":");
+        double degrees = Double.valueOf(degMinSec[0]);
+        if (degrees < 0) degMinSec[0] = String.valueOf(-degrees);
+        return degMinSec[0] + "/1," + degMinSec[1] + "/1," + degMinSec[2] + "/1000";
     }
 
     /** Tags the photo with GPS information if available */
@@ -171,8 +177,11 @@ public class MainActivity extends AppCompatActivity {
                 final Location location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 final String path = photo.getAbsolutePath();
                 final ExifInterface exif = new ExifInterface(path);
-                exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, String.valueOf(location.getLatitude()));
-                exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, String.valueOf(location.getLongitude()));
+
+                exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, getGeoCoordinates(location.getLatitude()));
+                exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, getGeoCoordinates(location.getLongitude()));
+                exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, location.getLatitude() < 0 ? "S" : "N");
+                exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, location.getLongitude() < 0 ? "W" : "E");
                 exif.saveAttributes();
             }
         }
