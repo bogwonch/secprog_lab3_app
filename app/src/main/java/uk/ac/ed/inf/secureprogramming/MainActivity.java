@@ -68,36 +68,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         this.locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        this.locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-                Log.d(TAG, "Enabled provider: " + provider);
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-                Log.d(TAG, "Disabled provider: " + provider);
-            }
-        };
     }
 
     /** Callback for when the user wants to take a picture */
     public void onTakePicture(View view) {
-        // Start tracking the user's location
-        if (!(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-            if (this.locationManager != null && this.locationListener != null) {
-                //this.locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this.locationListener);
-            }
-        }
-
         this.dispatchTakePictureIntent();
     }
 
